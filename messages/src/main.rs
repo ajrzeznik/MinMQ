@@ -9,8 +9,7 @@ fn main() {
             .expect("failed to execute process")
     } else {
         Command::new("flatc")
-            .arg("-c")
-            .arg("echo hello")
+            .args(["-r", "--gen-object-api", "-o", "generated", "./src/message_definitions/node_address.fbs"])
             .output()
             .expect("failed to execute process")
     };
