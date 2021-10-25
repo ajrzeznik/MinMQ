@@ -4,12 +4,12 @@ fn main() {
 
     let output = if cfg!(target_os = "windows") {
         Command::new("flatc.exe")
-            .args(["-r", "--gen-object-api", "-o", "generated", ".\\src\\message_definitions\\node_address.fbs"])
+            .args(["-r", "--gen-object-api", "-o", "generated", ".\\src\\message_definitions\\NodeAddress.fbs"])
             .output()
             .expect("failed to execute process")
     } else {
         Command::new("flatc")
-            .args(["-r", "--gen-object-api", "-o", "generated", "./src/message_definitions/node_address.fbs"])
+            .args(["-r", "--gen-object-api", "-o", "generated", "./src/message_definitions/NodeAddress.fbs"])
             .output()
             .expect("failed to execute process")
     };
