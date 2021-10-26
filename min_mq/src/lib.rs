@@ -1,5 +1,7 @@
 use std::net::UdpSocket;
 use std::io;
+use socket2;
+use std::mem::MaybeUninit;
 
 const DYNAMIC_DISCOVER_PORT: u16 = 43357;
 
@@ -13,10 +15,18 @@ pub fn broadcast_address() -> io::Result<()> {
 
 //TODO: Clean this up to reuse the bound port, since that's needed to listen for messages
 pub fn receive_broadcast() -> io::Result<()> {
-    let socket : UdpSocket = UdpSocket::bind(format!("0.0.0.0:{}", DYNAMIC_DISCOVER_PORT))?;
-    let mut buf = [0; 100];
-    let (number_of_bytes, src_addr) = socket.recv_from(&mut buf).unwrap();
-    println!("Received: {:?}", &buf[0..number_of_bytes]);
+    let socket = socket2::Socket::new(socket2::Domain::IPV4,
+                                      socket2::Type::DGRAM,
+                                      Some(socket2::Protocol::UDP)).unwrap();
+    socket.set_reuse_address(true).unwrap();
+    let address: std::net::SocketAddr = format!("0.0.0.0:{}", DYNAMIC_DISCOVER_PORT).parse().unwrap();
+    socket.bind(&address.into())?;
+    let mut buf = [MaybeUninit::<u8>::new(0); 100];
+    socket.recv_from(&mut buf);
+    //let socket : UdpSocket = UdpSocket::bind(format!("0.0.0.0:{}", DYNAMIC_DISCOVER_PORT))?;
+    //let mut buf = [0; 100];
+    //let (number_of_bytes, src_addr) = socket.recv_from(&mut buf).unwrap();
+    //println!("Received: {:?}", &buf[0..number_of_bytes]);
     Ok(())
 }
 
