@@ -1,6 +1,8 @@
 use std::net::UdpSocket;
 use std::io;
 
+const DYNAMIC_DISCOVER_PORT: u16 = 43357;
+
 pub fn broadcast_address() -> io::Result<()> {
     let socket : UdpSocket = UdpSocket::bind("0.0.0.0:0")?;
     socket.set_broadcast(true)?;
@@ -20,8 +22,20 @@ pub fn receive_broadcast() -> io::Result<()> {
 
 #[cfg(test)]
 mod tests {
+    use std::thread;
+    use std::time::Duration;
+    use crate::{receive_broadcast, broadcast_address};
+
     #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
+    //TODO: Clean this up a bit, remove the unwraps and have proper asserts
+    fn send_and_receive() {
+        let receive_thread = thread::spawn(|| {
+            assert!(receive_broadcast().is_ok())
+        });
+        //TODO: Have a synchronization method to test this instead of a wait
+        thread::sleep(Duration::from_millis(1000));
+
+        assert!(broadcast_address().is_ok());
+        assert!(receive_thread.join().is_ok());
     }
 }
