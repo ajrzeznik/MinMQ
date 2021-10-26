@@ -22,7 +22,9 @@ pub fn receive_broadcast() -> io::Result<()> {
     let address: std::net::SocketAddr = format!("0.0.0.0:{}", DYNAMIC_DISCOVER_PORT).parse().unwrap();
     socket.bind(&address.into())?;
     let mut buf = [MaybeUninit::<u8>::new(0); 100];
-    socket.recv_from(&mut buf);
+    let (byte_count, sending_address) = socket.recv_from(&mut buf)?;
+    let c= buf.iter().map(|a|unsafe {a.assume_init()}).collect::<Vec<u8>>();
+    println!("Received {:?}", c);
     Ok(())
 }
 
