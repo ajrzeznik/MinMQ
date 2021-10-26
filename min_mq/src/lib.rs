@@ -23,10 +23,6 @@ pub fn receive_broadcast() -> io::Result<()> {
     socket.bind(&address.into())?;
     let mut buf = [MaybeUninit::<u8>::new(0); 100];
     socket.recv_from(&mut buf);
-    //let socket : UdpSocket = UdpSocket::bind(format!("0.0.0.0:{}", DYNAMIC_DISCOVER_PORT))?;
-    //let mut buf = [0; 100];
-    //let (number_of_bytes, src_addr) = socket.recv_from(&mut buf).unwrap();
-    //println!("Received: {:?}", &buf[0..number_of_bytes]);
     Ok(())
 }
 
