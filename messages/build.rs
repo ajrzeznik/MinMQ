@@ -1,14 +1,15 @@
 use std::process::Command;
 
 fn main() {
-
+    println!("begin custom build script");
     let output = if cfg!(target_os = "windows") {
         Command::new("flatc.exe")
             .args(["-r", "--gen-object-api", "-o", "generated", ".\\src\\message_definitions\\NodeAddress.fbs"])
             .output()
             .expect("failed to execute process")
     } else {
-        Command::new("flatc")
+	println!("Performing Linux Build");
+        Command::new("./flatc")
             .args(["-r", "--gen-object-api", "-o", "generated", "./src/message_definitions/NodeAddress.fbs"])
             .output()
             .expect("failed to execute process")
