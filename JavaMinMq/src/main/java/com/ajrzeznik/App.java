@@ -14,6 +14,10 @@ public class App
 
     public static void main( String[] args ) throws IOException {
         DynamicDiscoveryListener listener = new DynamicDiscoveryListener();
-        listener.run();
+        listener.start();
+        TimerQueue timer = TimerQueue.create();
+        timer.addTimer("one second", 1.0);
+        timer.addTimer("five seconds", 5.0);
+        timer.run();
     }
 }
