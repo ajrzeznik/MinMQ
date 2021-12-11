@@ -16,7 +16,7 @@ public class TimerQueue extends Thread{
     }
 
     public void addTimer(String name, double interval) {
-        queue.add(Timer.create(name, interval));
+        queue.add(new Timer(name, (long) (interval * 1000)));
     }
 
     public void run() {
@@ -40,4 +40,36 @@ public class TimerQueue extends Thread{
             e.printStackTrace();
         }
     }
+
+    static class Timer implements Comparable<Timer>{
+        //Publicly facing static constructors use double time, but internally timer runs off of milliseconds
+
+        private long nextTime;
+        private final long interval;
+        private final String name;
+
+        private Timer(String name, long interval) {
+            this.name = name;
+            this.interval = interval;
+            this.nextTime = Instant.now().toEpochMilli() + this.interval;
+        }
+
+        void tick() {
+            nextTime += interval;
+        }
+
+        long getNextTime() {
+            return nextTime;
+        }
+
+        String getName() {
+            return name;
+        }
+
+        @Override
+        public int compareTo(Timer timer) {
+            return (int) (this.nextTime - timer.nextTime);
+        }
+    }
+
 }
