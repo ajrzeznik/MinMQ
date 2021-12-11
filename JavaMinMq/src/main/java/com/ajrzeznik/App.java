@@ -1,13 +1,19 @@
 package com.ajrzeznik;
 
+import java.io.IOException;
+
 /**
  * Hello world!
  *
  */
 public class App 
 {
-    public static void main( String[] args )
-    {
-        System.out.println( "Hello World!" );
+
+    public App() {
+    }
+
+    public static void main( String[] args ) throws IOException {
+        DynamicDiscoveryListener listener = new DynamicDiscoveryListener();
+        listener.run();
     }
 }

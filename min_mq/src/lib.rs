@@ -21,6 +21,7 @@ pub fn receive_broadcast() -> io::Result<()> {
     socket.set_reuse_address(true).unwrap();
     let address: std::net::SocketAddr = format!("0.0.0.0:{}", DYNAMIC_DISCOVER_PORT).parse().unwrap();
     socket.bind(&address.into())?;
+    //TODO AR: Handle some receive/send buffering here!!!!
     let mut buf = [MaybeUninit::<u8>::new(0); 100];
     let (byte_count, sending_address) = socket.recv_from(&mut buf)?;
     let c= buf.iter().map(|a|unsafe {a.assume_init()}).collect::<Vec<u8>>();
