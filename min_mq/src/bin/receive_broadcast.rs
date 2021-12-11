@@ -2,7 +2,7 @@
 use min_mq::receive_broadcast;
 
 fn main() {
-    println!("Broadcasting Data");
+    println!("Waiting for Broadcasting Data");
     receive_broadcast().unwrap();
-    println!("Broadcast complete");
+    println!("Broadcast Receive complete");
 }
