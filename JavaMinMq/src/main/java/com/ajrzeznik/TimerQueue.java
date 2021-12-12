@@ -1,22 +1,20 @@
 package com.ajrzeznik;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.PriorityQueue;
-import java.util.concurrent.BlockingQueue;
 
 // TODO AR: clean up the message queue stuff to use a socket
 public class TimerQueue extends Thread{
     private final PriorityQueue<Timer> queue = new PriorityQueue<>();
-    private final BlockingQueue<String> message_queue;
+    private final PubSocket pubSocketToNode;
 
-    public static TimerQueue create(BlockingQueue<String> queue) {
-        return new TimerQueue(queue);
+    public static TimerQueue create(PubSocket pubSocket) {
+        return new TimerQueue(pubSocket);
     }
 
-    private TimerQueue(BlockingQueue<String> queue) {
-        message_queue = queue;
+    private TimerQueue(PubSocket pubSocket) {
+        pubSocketToNode = pubSocket;
     }
 
     public void addTimer(String name, double interval) {
@@ -31,7 +29,7 @@ public class TimerQueue extends Thread{
                 long currentTime = Instant.now().toEpochMilli();
                 if (currentTime > timer.getNextTime()) {
                     timer = queue.poll();
-                    message_queue.put(timer.name);
+                    pubSocketToNode.send(timer.name.getBytes(StandardCharsets.UTF_8));
                     timer.tick();
                     queue.add(timer);
                 } else {

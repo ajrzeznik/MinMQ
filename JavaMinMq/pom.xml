@@ -23,7 +23,7 @@
     </repository>
     <repository>
       <id>clojars.org</id>
-      <url>http://clojars.org/repo</url>
+      <url>http://clojars.org/repo</url>/home/ajrzeznik/repos/nngjvm/build/classes/java
     </repository>
   </repositories>
 
