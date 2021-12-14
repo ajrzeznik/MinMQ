@@ -1,7 +1,7 @@
 // Example IDL file for our monster's schema.
 
 //TODO: Possibly consider adding a namespace
-//namespace MyGame.Sample;
+namespace com.ajrzeznik;
 
 table NodeAddress {
   name:string;

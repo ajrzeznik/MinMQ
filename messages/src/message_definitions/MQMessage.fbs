@@ -3,8 +3,14 @@
 //TODO: Possibly consider adding a namespace
 namespace com.ajrzeznik;
 
+enum MessageType:byte {
+    Topic = 0,
+    Address = 1
+}
+
 table MQMessage {
   topic:string;
+  message_type:MessageType;
 }
 
 root_type MQMessage;
