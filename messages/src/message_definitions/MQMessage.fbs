@@ -1,0 +1,10 @@
+// Example IDL file for our monster's schema.
+
+//TODO: Possibly consider adding a namespace
+namespace com.ajrzeznik;
+
+table MQMessage {
+  topic:string;
+}
+
+root_type MQMessage;

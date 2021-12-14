@@ -3,6 +3,8 @@ package com.ajrzeznik;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.PriorityQueue;
+import com.ajrzeznik.MQMessage;
+import com.google.flatbuffers.FlatBufferBuilder;
 
 // TODO AR: clean up the message queue stuff to use a socket
 public class TimerQueue extends Thread{
@@ -29,7 +31,12 @@ public class TimerQueue extends Thread{
                 long currentTime = Instant.now().toEpochMilli();
                 if (currentTime > timer.getNextTime()) {
                     timer = queue.poll();
-                    pubSocketToNode.send(timer.name.getBytes(StandardCharsets.UTF_8));
+
+                    FlatBufferBuilder builder = new FlatBufferBuilder();
+                    int topic = builder.createString(timer.name);
+                    MQMessage.finishMQMessageBuffer(builder, MQMessage.createMQMessage(builder, topic));
+                    //TODO AR: Send a byte buffer portion
+                    pubSocketToNode.send(builder.sizedByteArray());
                     timer.tick();
                     queue.add(timer);
                 } else {

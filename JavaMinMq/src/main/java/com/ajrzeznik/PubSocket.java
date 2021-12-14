@@ -12,6 +12,7 @@ public class PubSocket {
     }
 
     public void send(byte[] data){
+        //TODO AR: Send a byte buffer portion
         socket.send(data);
     }
 

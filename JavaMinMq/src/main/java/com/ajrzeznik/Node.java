@@ -2,6 +2,7 @@ package com.ajrzeznik;
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
+import com.ajrzeznik.MQMessage;
 
 public class Node {
 
@@ -27,12 +28,9 @@ public class Node {
     void run() throws InterruptedException {
         timerQueue.start();
         while (true) {
-            ByteBuffer message = receiveSocket.receive();
-            int ref_len = message.remaining();
-            byte[] buf = new byte[ref_len];
-            message.get(buf);
-            String strMsg = new String(buf);
-            // System.out.println(message);
+            MQMessage message = MQMessage.getRootAsMQMessage(receiveSocket.receive());
+            String strMsg = message.topic();
+            System.out.println("Received message of topic: "+ strMsg );
             callbackMap.get(strMsg).run();
         }
     }
