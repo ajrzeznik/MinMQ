@@ -5,6 +5,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
+import java.nio.ByteBuffer;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -32,7 +33,10 @@ public class DynamicDiscoveryListener extends Thread{
                 e.printStackTrace();
                 break;
             }
-            System.out.println(buffer[0]+"," + buffer[1] + ","+ buffer[2]+ ","+ buffer[3]);
+            //TODO AR: Should log when the packet length is too short, in order to note the issue and deal with it elsewhere
+            System.out.println("Packet length::" + packet.getLength());
+            NodeAddress addressMessage = NodeAddress.getRootAsNodeAddress(ByteBuffer.wrap(buffer));
+            System.out.println("name: " + addressMessage.name() + ", port: " + addressMessage.port()+ ", address: " + packet.getAddress());
             System.out.println(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")));
         }
 

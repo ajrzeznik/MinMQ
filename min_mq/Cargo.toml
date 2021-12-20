@@ -8,4 +8,5 @@ edition = "2018"
 [dependencies]
 socket2 = "0.4.2"
 chrono = "*"
-messages = { path = "../messages/" }
+messages = { path = "../messages" }
+flatbuffers = "2.0.0"
