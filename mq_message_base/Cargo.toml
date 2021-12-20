@@ -1,12 +1,9 @@
 [package]
-name = "messages"
+name = "mq_message_base"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-[lib]
-name = "min_mq_messages"
-path = "src/lib.rs"
 
 [dependencies]
 flatbuffers = "2.0.0"

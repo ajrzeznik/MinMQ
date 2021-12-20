@@ -10,7 +10,9 @@ enum MessageType:byte {
 
 table MQMessage {
   topic:string;
+  origin:string;
   message_type:MessageType;
+  data:[uint8];
 }
 
 root_type MQMessage;

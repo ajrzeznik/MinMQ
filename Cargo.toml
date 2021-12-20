@@ -1,5 +1,5 @@
 [workspace]
 
 members = [
-    "min_mq", "messages"
+    "min_mq", "message_generator", "mq_message_base"
 ]

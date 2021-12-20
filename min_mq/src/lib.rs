@@ -2,8 +2,8 @@ use std::net::UdpSocket;
 use std::io;
 use socket2;
 use std::mem::MaybeUninit;
-use min_mq_messages;
-use min_mq_messages::NodeAddressT;
+use mq_message_base;
+use mq_message_base::NodeAddressT;
 
 const DYNAMIC_DISCOVER_PORT: u16 = 43357;
 
@@ -22,7 +22,7 @@ pub fn broadcast_address() -> io::Result<()> {
     Ok(())
 }
 
-//TODO: Clean this up to reuse the bound port, since that's needed to listen for messages
+//TODO: Clean this up to reuse the bound port, since that's needed to listen for message_generator
 pub fn receive_broadcast() -> io::Result<()> {
     let socket = socket2::Socket::new(socket2::Domain::IPV4,
                                       socket2::Type::DGRAM,
