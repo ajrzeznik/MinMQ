@@ -18,7 +18,7 @@ public class App
         // TODO AR: Need to join on this as it's not a Daemon
         DynamicDiscoveryListener listener = new DynamicDiscoveryListener();
         listener.start();
-        Node node = Node.create();
+        Node node = Node.create("fun node");
         node.addTimer("One Second", 1, () -> {
             String timestring = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"));
             System.out.println(timestring+": Triggered timer: One Second");//TODO AR: This needs to be send somewhere

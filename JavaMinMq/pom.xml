@@ -23,7 +23,7 @@
     </repository>
     <repository>
       <id>clojars.org</id>
-      <url>http://clojars.org/repo</url>/home/ajrzeznik/repos/nngjvm/build/classes/java
+      <url>http://clojars.org/repo</url>
     </repository>
   </repositories>
 
@@ -72,7 +72,7 @@
             </goals>
             <configuration>
               <sources>
-                <source>../messages/generated</source>
+                <source>../message_generator/generated</source>
               </sources>
             </configuration>
           </execution>
