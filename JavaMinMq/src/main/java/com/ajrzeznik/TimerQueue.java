@@ -34,10 +34,12 @@ public class TimerQueue extends Thread{
 
                     FlatBufferBuilder builder = new FlatBufferBuilder();
                     //TODO AR: Clean up this creation/work here on these types
-                    int topic_offset = builder.createString(timer.name);
-                    int origin_offset = builder.createString("Self");
-                    int data_offset = builder.createByteVector(new byte[0]);
-                    MQMessage.finishMQMessageBuffer(builder, MQMessage.createMQMessage(builder, topic_offset, origin_offset, MessageType.Topic, data_offset));
+                    MQMessage.finishMQMessageBuffer(builder, MQMessage.createMQMessage(builder,
+                            builder.createString(timer.name),
+                            builder.createString("Self"),
+                            MessageType.Topic,
+                            builder.createByteVector(new byte[0]))
+                    );
                     //TODO AR: Send a byte buffer portion
                     pubSocketToNode.send(builder.sizedByteArray());
                     timer.tick();

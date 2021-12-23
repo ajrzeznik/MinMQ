@@ -34,7 +34,11 @@ public class Node {
         timerQueue.addTimer(name, interval);
     }
 
-    void run() throws InterruptedException {
+    void run() throws InterruptedException, SocketException {
+
+        //TODO AR: Unify socket usage
+        DynamicDiscoveryListener listener = new DynamicDiscoveryListener(PubSocket.create("ipc:///tmp/sock"));
+        listener.start();
 
         addTimer("Dynamic Discovery", 2.0, () -> {
             try {

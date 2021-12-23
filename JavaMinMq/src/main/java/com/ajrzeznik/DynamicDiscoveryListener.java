@@ -15,11 +15,12 @@ public class DynamicDiscoveryListener extends Thread{
 
     private final DatagramSocket listenerSocket = new DatagramSocket(null);
     private final byte[] buffer = new byte[256]; //TODO AR: Consider some size changes here
+    private final PubSocket socket;
 
-    public DynamicDiscoveryListener() throws SocketException {
+    public DynamicDiscoveryListener(PubSocket pubSocket) throws SocketException {
         listenerSocket.setReuseAddress(true);
         listenerSocket.bind(new InetSocketAddress("0.0.0.0", DYNAMIC_DISCOVERY_PORT));
-
+        this.socket = pubSocket;
     }
 
     public void run() {
