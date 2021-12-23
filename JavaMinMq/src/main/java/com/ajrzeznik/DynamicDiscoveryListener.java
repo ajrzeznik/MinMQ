@@ -11,7 +11,7 @@ import java.time.format.DateTimeFormatter;
 
 public class DynamicDiscoveryListener extends Thread{
 
-    private static final int DYNAMIC_DISCOVERY_PORT = 43357;
+    public static final int DYNAMIC_DISCOVERY_PORT = 43357;
 
     private final DatagramSocket listenerSocket = new DatagramSocket(null);
     private final byte[] buffer = new byte[256]; //TODO AR: Consider some size changes here
