@@ -10,8 +10,8 @@ import com.ajrzeznik.MQMessage;
 public class Node {
 
     private final HashMap<String, Runnable> callbackMap = new HashMap<>();
-    private final SubSocket receiveSocket = SubSocket.create("ipc:///tmp/sock");
-    private final TimerQueue timerQueue = TimerQueue.create(PubSocket.create("ipc:///tmp/sock"));
+    private final SubSocket receiveSocket = SubSocket.create("tcp://*:45454");
+    private final TimerQueue timerQueue = TimerQueue.create(PubSocket.create("tcp://localhost:45454"));
     private final AddressMap addressMap;
     private final DynamicDiscoveryBroadcaster broadcaster;
 
@@ -37,7 +37,7 @@ public class Node {
     void run() throws InterruptedException, SocketException {
 
         //TODO AR: Unify socket usage
-        DynamicDiscoveryListener listener = new DynamicDiscoveryListener(PubSocket.create("ipc:///tmp/sock"));
+        DynamicDiscoveryListener listener = new DynamicDiscoveryListener(PubSocket.create("tcp://localhost:45454"));
         listener.start();
 
         addTimer("Dynamic Discovery", 2.0, () -> {
