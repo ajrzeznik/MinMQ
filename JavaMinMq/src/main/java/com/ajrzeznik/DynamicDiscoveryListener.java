@@ -1,5 +1,7 @@
 package com.ajrzeznik;
 
+import com.google.flatbuffers.FlatBufferBuilder;
+
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -34,11 +36,22 @@ public class DynamicDiscoveryListener extends Thread{
                 e.printStackTrace();
                 break;
             }
-            //TODO AR: Should log when the packet length is too short, in order to note the issue and deal with it elsewhere
-            System.out.println("Packet length::" + packet.getLength());
             NodeAddress addressMessage = NodeAddress.getRootAsNodeAddress(ByteBuffer.wrap(buffer));
-            System.out.println("name: " + addressMessage.name() + ", port: " + addressMessage.port()+ ", address: " + packet.getAddress());
-            System.out.println(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")));
+            //TODO AR: Should log when the packet length is too short, in order to note the issue and deal with it elsewhere
+            FlatBufferBuilder builder = new FlatBufferBuilder();
+            //TODO AR: Clean up this creation/work here on these types
+            MQMessage.finishMQMessageBuffer(builder, MQMessage.createMQMessage(builder,
+                    builder.createString(packet.getAddress()+ ":" + addressMessage.port()),
+                    builder.createString(addressMessage.name()),
+                    MessageType.Address,
+                    builder.createByteVector(new byte[0]))
+            );
+            //TODO AR: Send a byte buffer portion
+            socket.send(builder.sizedByteArray());
+
+            //System.out.println("Packet length::" + packet.getLength());
+
+            //System.out.println("name: " + addressMessage.name() + ", port: " + addressMessage.port()+ ", address: " + packet.getAddress());
         }
 
     }
