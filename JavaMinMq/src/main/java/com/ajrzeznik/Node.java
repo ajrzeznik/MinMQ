@@ -107,10 +107,11 @@ public class Node {
                         System.out.println("==NEW ADDRESS: name: " + message.origin()+ ", address: " + address);
                         System.out.println(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")));
                     }
+                    break;
                 case MessageType.Ping:
                     String pingMsg = message.topic();
                     System.out.println("Received Ping from " + message.origin() );
-                    
+
                     break;
 
             }
