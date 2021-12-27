@@ -35,7 +35,7 @@ public class PubSocket {
         socket.send(data);
     }
 
-    void confirmConnection() {
+    void setConnected() {
         this.connected = true;
     }
 }

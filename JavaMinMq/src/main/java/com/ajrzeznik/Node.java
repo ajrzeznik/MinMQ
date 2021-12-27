@@ -3,14 +3,11 @@ package com.ajrzeznik;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.SocketException;
-import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.ajrzeznik.MQMessage;
 import com.google.flatbuffers.FlatBufferBuilder;
 
 public class Node {
@@ -109,8 +106,31 @@ public class Node {
                     }
                     break;
                 case MessageType.Ping:
-                    String pingMsg = message.topic();
                     System.out.println("Received Ping from " + message.origin() );
+                    //If we don't contain the key, we deal with that issue by waiting for it to be added by an address msg
+                    if (addressMap.socketMap.containsKey(message.origin())){
+                        //TODO AR: Make this a final message variable on initialization, again as a simple optimization
+                        FlatBufferBuilder builder = new FlatBufferBuilder();
+                        //TODO AR: Clean up this creation/work here on these types
+                        MQMessage.finishMQMessageBuffer(builder, MQMessage.createMQMessage(builder,
+                                builder.createString(""),
+                                builder.createString(name),
+                                MessageType.Ack,
+                                builder.createByteVector(new byte[0]))
+                        );
+                        //TODO AR: Send a byte buffer portion
+                        byte[] messageBytes = builder.sizedByteArray();
+
+                        addressMap.socketMap.get(message.origin()).send(messageBytes);
+                    }
+                    break;
+
+                case MessageType.Ack:
+                    System.out.println("Received Ack from " + message.origin() );
+                    // Our address map MUST contain the origin in the case of an Ack; if not we would fail here
+                    addressMap.socketMap.get(message.origin()).setConnected();
+
+                    
 
                     break;
 
