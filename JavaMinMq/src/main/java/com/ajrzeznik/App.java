@@ -19,7 +19,7 @@ public class App
         Node node = Node.create("fun node");
         node.addTimer("One Second", 1, () -> {
             String timestring = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"));
-            System.out.println(timestring+": Triggered timer: One Second");//TODO AR: This needs to be send somewhere
+            System.out.println(timestring+": Triggered timer: One Second=====");//TODO AR: This needs to be send somewhere
         });
 
         node.addTimer("Five Second", 5, () -> {

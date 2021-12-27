@@ -36,7 +36,7 @@ public class TimerQueue extends Thread{
                     //TODO AR: Clean up this creation/work here on these types
                     MQMessage.finishMQMessageBuffer(builder, MQMessage.createMQMessage(builder,
                             builder.createString(timer.name),
-                            builder.createString("Self"),
+                            builder.createString("Self"), //TODO AR: Clean up with proper name
                             MessageType.Topic,
                             builder.createByteVector(new byte[0]))
                     );

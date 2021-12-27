@@ -7,18 +7,25 @@ public class PubSocket {
     }
     private nanomsg.pubsub.PubSocket socket = new nanomsg.pubsub.PubSocket();
     private String address;
+    private boolean connected;
 
     private PubSocket(String address) {
         this.address = address;
+        this.connected = false;
         socket.connect(address);
     }
 
     String getAddress(){
         return this.address;
     }
+    boolean isConnected(){
+        return this.connected;
+    }
 
+    // TODO AR: sync this socket
     void updateAddress(String address){
         this.address = address;
+        this.connected = false;
         socket = new nanomsg.pubsub.PubSocket();
         socket.connect(address);
     }
@@ -28,4 +35,7 @@ public class PubSocket {
         socket.send(data);
     }
 
+    void confirmConnection() {
+        this.connected = true;
+    }
 }

@@ -5,7 +5,9 @@ namespace com.ajrzeznik;
 
 enum MessageType:byte {
     Topic = 0,
-    Address = 1
+    Address = 1,
+    Ping = 2,
+    Ack = 3,
 }
 
 table MQMessage {
