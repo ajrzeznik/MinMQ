@@ -1,6 +1,7 @@
 package com.ajrzeznik;
 
 import java.util.HashMap;
+import java.util.Map;
 
 public class AddressMap {
 
@@ -8,6 +9,7 @@ public class AddressMap {
     // TODO AR: Thread safety is probably NOT needed here, as each publicher can hold a pubsocket as a reference, and
     // the pubsocket itself is guaranteed to be threadsafe. But this assumption should be checked.
     final HashMap<String, PubSocket> socketMap = new HashMap<>();
+    private boolean allConnected = false;
 
     AddressMap(String nodeName) {
         this.nodeName = nodeName;
@@ -25,6 +27,20 @@ public class AddressMap {
         } else {
             socketMap.put(name, PubSocket.create(address));
         }
+        allConnected = false;
         return true;
+    }
+
+    boolean allNewlyConnected() {
+        if (allConnected) {
+            return false;
+        } else {
+            boolean connectedCheck = true;
+            //TODO AR: Optimize with a break out early?
+            for (Map.Entry<String,PubSocket> item : socketMap.entrySet()) {
+                connectedCheck = connectedCheck && item.getValue().isConnected();
+            }
+            return connectedCheck;
+        }
     }
 }

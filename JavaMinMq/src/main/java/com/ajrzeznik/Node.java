@@ -20,6 +20,10 @@ public class Node {
     private final String name;
     private final DynamicDiscoveryBroadcaster broadcaster;
 
+
+    private final byte[] pingBytes;
+    private final byte[] ackBytes;
+
     public static Node create(String name) throws IOException {
         return new Node(name);
     }
@@ -35,6 +39,31 @@ public class Node {
         addressMap = new AddressMap(name);
         timerQueue = TimerQueue.create(PubSocket.create("tcp://localhost:"+port));
         broadcaster = new DynamicDiscoveryBroadcaster(name, port);
+
+        // Fixed Message Creation
+
+        FlatBufferBuilder builder = new FlatBufferBuilder();
+        //TODO AR: Clean up this creation/work here on these types
+        MQMessage.finishMQMessageBuffer(builder, MQMessage.createMQMessage(builder,
+                builder.createString(""),
+                builder.createString(name),
+                MessageType.Ping,
+                builder.createByteVector(new byte[0]))
+        );
+        pingBytes = builder.sizedByteArray();
+
+
+        builder = new FlatBufferBuilder();
+        //TODO AR: Clean up this creation/work here on these types
+        MQMessage.finishMQMessageBuffer(builder, MQMessage.createMQMessage(builder,
+                builder.createString(""),
+                builder.createString(name),
+                MessageType.Ack,
+                builder.createByteVector(new byte[0]))
+        );
+        ackBytes = builder.sizedByteArray();
+
+
     }
 
     public void addTimer(String name, double interval, Runnable callback) {
@@ -61,24 +90,11 @@ public class Node {
 
             // Ping anything that isn't properly connected
 
-            // TODO AR: If everything is connected, no need to allocate a new message, so can probably optimize that out
-
-            FlatBufferBuilder builder = new FlatBufferBuilder();
-            //TODO AR: Clean up this creation/work here on these types
-            MQMessage.finishMQMessageBuffer(builder, MQMessage.createMQMessage(builder,
-                    builder.createString(""),
-                    builder.createString(name),
-                    MessageType.Ping,
-                    builder.createByteVector(new byte[0]))
-            );
-            //TODO AR: Send a byte buffer portion
-            byte[] messageBytes = builder.sizedByteArray();
-
             for (Map.Entry<String,PubSocket> item : addressMap.socketMap.entrySet()) {
                 PubSocket socket= item.getValue();
                 if (!socket.isConnected()) {
                     System.out.println("Pinging Socket: " + item.getKey());
-                    socket.send(messageBytes);
+                    socket.send(pingBytes);
                 }
             }
 
@@ -109,19 +125,7 @@ public class Node {
                     System.out.println("Received Ping from " + message.origin() );
                     //If we don't contain the key, we deal with that issue by waiting for it to be added by an address msg
                     if (addressMap.socketMap.containsKey(message.origin())){
-                        //TODO AR: Make this a final message variable on initialization, again as a simple optimization
-                        FlatBufferBuilder builder = new FlatBufferBuilder();
-                        //TODO AR: Clean up this creation/work here on these types
-                        MQMessage.finishMQMessageBuffer(builder, MQMessage.createMQMessage(builder,
-                                builder.createString(""),
-                                builder.createString(name),
-                                MessageType.Ack,
-                                builder.createByteVector(new byte[0]))
-                        );
-                        //TODO AR: Send a byte buffer portion
-                        byte[] messageBytes = builder.sizedByteArray();
-
-                        addressMap.socketMap.get(message.origin()).send(messageBytes);
+                        addressMap.socketMap.get(message.origin()).send(ackBytes);
                     }
                     break;
 
@@ -130,8 +134,10 @@ public class Node {
                     // Our address map MUST contain the origin in the case of an Ack; if not we would fail here
                     addressMap.socketMap.get(message.origin()).setConnected();
 
-                    
-
+                    if (addressMap.allNewlyConnected()) {
+                        //TODO AR: Clean this up to send out all the required messages for synchronization
+                        System.out.println("***SEND OUT ALL CONNECTED MESSAGES***");
+                    }
                     break;
 
             }
