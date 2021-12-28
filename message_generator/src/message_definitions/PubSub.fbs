@@ -1,0 +1,11 @@
+// Example IDL file for our monster's schema.
+
+//TODO: Possibly consider adding a namespace
+namespace com.ajrzeznik;
+
+table PubSub {
+  pub:[string];
+  sub:[string];
+}
+
+root_type PubSub;

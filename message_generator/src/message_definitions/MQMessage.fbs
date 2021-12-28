@@ -8,6 +8,7 @@ enum MessageType:byte {
     Address = 1,
     Ping = 2,
     Ack = 3,
+    PubSub = 4,
 }
 
 table MQMessage {

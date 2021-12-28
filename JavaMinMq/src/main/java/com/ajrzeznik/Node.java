@@ -6,6 +6,7 @@ import java.net.SocketException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 
 import com.google.flatbuffers.FlatBufferBuilder;
@@ -19,10 +20,13 @@ public class Node {
     private final AddressMap addressMap;
     private final String name;
     private final DynamicDiscoveryBroadcaster broadcaster;
-
+    private final HashMap<String, HashMap<String, PubSocket>> publisherMap = new HashMap<>();
+    private final HashSet<String> localPublishers = new HashSet<>();
+    private final HashSet<String> localSubscribers = new HashSet<>(); //TODO AR: Can we support double/multi subscriptions? i.e. multiple callbacks per topic?
 
     private final byte[] pingBytes;
     private final byte[] ackBytes;
+
 
     public static Node create(String name) throws IOException {
         return new Node(name);
@@ -137,7 +141,72 @@ public class Node {
                     if (addressMap.allNewlyConnected()) {
                         //TODO AR: Clean this up to send out all the required messages for synchronization
                         System.out.println("***SEND OUT ALL CONNECTED MESSAGES***");
+
+
+
+                        FlatBufferBuilder builder = new FlatBufferBuilder();
+                        int[] subOffsets = new int[localSubscribers.size()];
+
+                        int i = 0;
+                        for (String item : localSubscribers) {
+                            subOffsets[i] = builder.createString(item);
+                            i += 1;
+                        }
+                        int finalSubOffset = PubSub.createSubVector(builder, subOffsets);
+                        //TODO AR: Add publisher
+                        PubSub.startPubSub(builder);
+                        PubSub.addSub(builder, finalSubOffset);
+                        builder.finish(PubSub.endPubSub(builder));
+
+                        byte[] dataBytes = builder.sizedByteArray();
+
+                        //TODO AR: Clean up this creation/work here on these types
+                        builder = new FlatBufferBuilder();
+                        PubSub.finishPubSubBuffer(builder, MQMessage.createMQMessage(builder,
+                                builder.createString(""),
+                                builder.createString(name),
+                                MessageType.PubSub,
+                                builder.createByteVector(dataBytes)
+                        ));
+                        byte[] msgBytes = builder.sizedByteArray();
+
+                        for (Map.Entry<String, PubSocket> item: addressMap.socketMap.entrySet()){
+                            item.getValue().send(msgBytes);
+                        }
+
                     }
+                    break;
+
+                case MessageType.PubSub:
+                    System.out.println("Received PubSub from " + message.origin() );
+                    // Our address map MUST contain the origin in the case of an Ack; if not we would fail here
+                    addressMap.socketMap.get(message.origin()).setConnected();
+
+                    PubSub pubsubData = PubSub.getRootAsPubSub(message.dataAsByteBuffer());
+
+                    //TODO AR:Do I even need the pub data? Really I just need sub and can cross-reference
+                    for (int i = 0; i < pubsubData.subLength(); i++) {
+                        String topic = pubsubData.sub(i);
+                        System.out.println("***SUBREQ: " + topic);
+                        if (localPublishers.contains(topic)){
+                            if (publisherMap.containsKey(topic)) {
+                                HashMap<String, PubSocket> activePubMap = publisherMap.get(topic);
+                                //TODO AR: message.origin should probably be a variable here
+                                if (!activePubMap.containsKey(message.origin())) {
+                                    //TODO AR: This is a critical place to check thread safety, BE CAREFUL. Need to copy replace here/
+                                    HashMap<String, PubSocket> newPubMap = (HashMap<String, PubSocket>) activePubMap.clone();
+                                    newPubMap.put(message.origin(), addressMap.socketMap.get(message.origin()));
+                                }
+                            } else {
+                                //TODO AR***: This should PROBABLY be created when a new local publisher is created? Yeah,
+                                // That would make things more efficient with sharing the publication hashmap
+                                HashMap<String, PubSocket> newPubMap = new HashMap<>();
+                                newPubMap.put(message.origin(), addressMap.socketMap.get(message.origin()));
+                                publisherMap.put(topic, newPubMap);
+                            }
+                        }
+                    }
+
                     break;
 
             }

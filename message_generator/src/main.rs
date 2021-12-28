@@ -10,7 +10,7 @@ fn main() {
     } else {
         println!("Performing Linux Build");
         Command::new("./flatc")
-            .args(["-r", "-j", "--gen-object-api", "--gen-mutable", "-o", "generated", "./src/message_definitions/NodeAddress.fbs", "./src/message_definitions/MQMessage.fbs"])
+            .args(["-r", "-j", "--gen-object-api", "--gen-mutable", "-o", "generated", "./src/message_definitions/PubSub.fbs", "./src/message_definitions/NodeAddress.fbs", "./src/message_definitions/MQMessage.fbs"])
             .output()
             .expect("failed to execute process")
     };
