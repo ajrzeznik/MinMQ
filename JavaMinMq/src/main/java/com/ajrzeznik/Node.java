@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import com.google.flatbuffers.FlatBufferBuilder;
+import com.google.gson.Gson;
 
 public class Node {
 
@@ -25,7 +26,8 @@ public class Node {
     private final HashMap<String, HashMap<String, PubSocket>> publisherMap = new HashMap<>();
     private final HashSet<String> localPublishers = new HashSet<>();
     private final HashSet<String> localSubscribers = new HashSet<>(); //TODO AR: Can we support double/multi subscriptions? i.e. multiple callbacks per topic?
-
+    private final Gson gson = new Gson(); //TODO AR: Look into making lazy instantiated, and possibly threading issues here.
+    //From online notes, Gson instances are threadsafe
     private final byte[] pingBytes;
     private final byte[] ackBytes;
 
@@ -108,6 +110,34 @@ public class Node {
         }
     }
 
+    //TODO AR: Stringify
+    class JsonPublisher extends Publisher<Object> {
+        //TODO AR: This can be a lot more efficient if we use a reference instead, maybe
+
+
+        private JsonPublisher(String topic) {
+            super(topic);
+        }
+
+        public void publish(Object data){
+            //TODO AR: Clean up this if check, it's not strictly needed here
+            if (publisherMap.containsKey(topic)) {
+                FlatBufferBuilder builder = new FlatBufferBuilder();
+                //TODO AR: Clean up this creation/work here on these types
+                MQMessage.finishMQMessageBuffer(builder, MQMessage.createMQMessage(builder,
+                        builder.createString(topic),
+                        builder.createString(name),
+                        MessageType.Topic,
+                        builder.createByteVector(gson.toJson(data).getBytes(StandardCharsets.UTF_8)) //TODO AR: Add proper serialization here!!!!
+                ));
+                byte[] pubBytes = builder.sizedByteArray();
+                for (Map.Entry<String, PubSocket> item : publisherMap.get(topic).entrySet()) {
+                    item.getValue().send(pubBytes);
+                }
+            }
+        }
+    }
+
     public void addTimer(String name, double interval, Runnable callback) {
         // TODO AR: handle extra naming here
         // TODO AR: Handle dynamic addition of tiemrs
@@ -121,6 +151,13 @@ public class Node {
         localPublishers.add(topic);
         publisherMap.put(topic, new HashMap<>());
         return new TextPublisher(topic);
+    }
+
+    public JsonPublisher addJsonPublisher(String topic){
+        //TODO AR: Check this syncing and possibly clean it up elsewhere
+        localPublishers.add(topic);
+        publisherMap.put(topic, new HashMap<>());
+        return new JsonPublisher(topic);
     }
 
     public void Subscribe(String topic, Consumer<String> callback){
