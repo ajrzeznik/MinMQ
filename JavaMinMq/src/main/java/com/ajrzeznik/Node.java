@@ -3,6 +3,7 @@ package com.ajrzeznik;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.SocketException;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -68,6 +69,34 @@ public class Node {
         ackBytes = builder.sizedByteArray();
 
 
+    }
+
+    //TODO AR: Stringify
+    class Publisher {
+        //TODO AR: This can be a lot more efficient if we use a reference instead, maybe
+        private final String topic;
+
+        private Publisher(String topic) {
+            this.topic = topic;
+        }
+
+        public void publish(String data){
+            //TODO AR: Clean up this if check, it's not strictly needed here
+            if (publisherMap.containsKey(topic)) {
+                FlatBufferBuilder builder = new FlatBufferBuilder();
+                //TODO AR: Clean up this creation/work here on these types
+                MQMessage.finishMQMessageBuffer(builder, MQMessage.createMQMessage(builder,
+                        builder.createString(topic),
+                        builder.createString(name),
+                        MessageType.Topic,
+                        builder.createByteVector(data.getBytes(StandardCharsets.UTF_8)) //TODO AR: Add proper serialization here!!!!
+                ));
+                byte[] pubBytes = builder.sizedByteArray();
+                for (Map.Entry<String, PubSocket> item : publisherMap.get(topic).entrySet()) {
+                    item.getValue().send(pubBytes);
+                }
+            }
+        }
     }
 
     public void addTimer(String name, double interval, Runnable callback) {
