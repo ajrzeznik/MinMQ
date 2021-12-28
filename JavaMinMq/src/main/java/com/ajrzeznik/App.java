@@ -28,8 +28,8 @@ public class App
             System.out.println("JSON CALLBACK: <<" + gson.fromJson(data , LinkedTreeMap.class) + ">>");
         });
 
-        Node.Publisher pubber = node.addTextPublisher("test_topic");
-        Node.Publisher pubberJson = node.addJsonPublisher("test_topic_json");
+        Node.TextPublisher pubber = node.addTextPublisher("test_topic");
+        Node.JsonPublisher pubberJson = node.addJsonPublisher("test_topic_json");
 
         node.addTimer("One Second", 1, () -> {
             //String timestring = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"));
