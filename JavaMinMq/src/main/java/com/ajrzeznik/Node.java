@@ -121,6 +121,8 @@ public class Node {
         callbackMap.put(topic, callback);
     }
 
+
+
     void run() throws InterruptedException, SocketException {
 
         //TODO AR: Unify socket usage
