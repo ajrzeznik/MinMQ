@@ -9,12 +9,13 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import com.google.flatbuffers.FlatBufferBuilder;
 
 public class Node {
 
-    private final HashMap<String, Runnable> callbackMap = new HashMap<>();
+    private final HashMap<String, Consumer<String>> callbackMap = new HashMap<>();
     private final SubSocket receiveSocket;
     private final int port;
     private final TimerQueue timerQueue;
@@ -103,8 +104,21 @@ public class Node {
         // TODO AR: handle extra naming here
         // TODO AR: Handle dynamic addition of tiemrs
         // TODO AR: Handle remove of timers maybe???
-        callbackMap.put(name, callback);
+        callbackMap.put(name, (data) -> {callback.run();});
         timerQueue.addTimer(name, interval);
+    }
+
+    public Publisher addPublisher(String topic){
+        //TODO AR: Check this syncing and possibly clean it up elsewhere
+        localPublishers.add(topic);
+        publisherMap.put(topic, new HashMap<>());
+        return new Publisher(topic);
+    }
+
+    public void Subscribe(String topic, Consumer<String> callback){
+        //TODO AR: TYPE CHECKING!!!!!! DO A LOT OF THAT!!!!! And make this actually work with the right types
+        localSubscribers.add(topic);
+        callbackMap.put(topic, callback);
     }
 
     void run() throws InterruptedException, SocketException {
@@ -143,7 +157,8 @@ public class Node {
                 case MessageType.Topic:
                     String strMsg = message.topic();
                     System.out.println("Received message of topic: "+ strMsg );
-                    callbackMap.get(strMsg).run();
+                    //if message.getByteBuffer();
+                    callbackMap.get(strMsg).accept(StandardCharsets.UTF_8.decode(message.getByteBuffer()).toString());
                     break;
                 case MessageType.Address:
                     //TODO AR: Deserialize data to node address
@@ -223,8 +238,7 @@ public class Node {
                                 //TODO AR: message.origin should probably be a variable here
                                 if (!activePubMap.containsKey(message.origin())) {
                                     //TODO AR: This is a critical place to check thread safety, BE CAREFUL. Need to copy replace here/
-                                    HashMap<String, PubSocket> newPubMap = (HashMap<String, PubSocket>) activePubMap.clone();
-                                    newPubMap.put(message.origin(), addressMap.socketMap.get(message.origin()));
+                                    activePubMap.put(message.origin(), addressMap.socketMap.get(message.origin()));
                                 }
                             } else {
                                 //TODO AR***: This should PROBABLY be created when a new local publisher is created? Yeah,
