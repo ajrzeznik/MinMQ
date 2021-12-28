@@ -20,12 +20,12 @@ public class App
         // TODO AR: Need to join on this as it's not a Daemon
         Gson gson = new Gson();
         Node node = Node.create("fun node");
-        node.Subscribe("test_topic", (data) -> {
+        node.SubscribeText("test_topic", (data) -> {
             System.out.println("I JUST RECEIVED A CALLBACK: <<" + data + ">>");
         });
 
-        node.Subscribe("test_topic_json", (data) -> {
-            System.out.println("JSON CALLBACK: <<" + gson.fromJson(data , LinkedTreeMap.class) + ">>");
+        node.SubscribeJson("test_topic_json", (data) -> {
+            System.out.println("JSON CALLBACK: <<" + data + ">>");
         });
 
         Node.TextPublisher pubber = node.addTextPublisher("test_topic");

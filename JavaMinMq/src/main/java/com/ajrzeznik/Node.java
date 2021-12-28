@@ -14,6 +14,7 @@ import java.util.function.Consumer;
 
 import com.google.flatbuffers.FlatBufferBuilder;
 import com.google.gson.Gson;
+import com.google.gson.internal.LinkedTreeMap;
 
 public class Node {
 
@@ -161,10 +162,16 @@ public class Node {
         return new JsonPublisher(topic);
     }
 
-    public void Subscribe(String topic, Consumer<String> callback){
+    public void SubscribeText(String topic, Consumer<String> callback){
         //TODO AR: TYPE CHECKING!!!!!! DO A LOT OF THAT!!!!! And make this actually work with the right types
         localSubscribers.add(topic);
         callbackMap.put(topic, (data) -> {callback.accept(StandardCharsets.UTF_8.decode(data).toString());});
+    }
+
+    public void SubscribeJson(String topic, Consumer<LinkedTreeMap> callback){
+        //TODO AR: TYPE CHECKING!!!!!! DO A LOT OF THAT!!!!! And make this actually work with the right types
+        localSubscribers.add(topic);
+        callbackMap.put(topic, (data) -> {callback.accept(gson.fromJson(StandardCharsets.UTF_8.decode(data).toString(), LinkedTreeMap.class));});
     }
 
 
