@@ -31,7 +31,7 @@ public class App
         node.Subscribe("test_topic", (data) -> {
             System.out.println("I JUST RECEIVED A CALLBACK: <<" + data + ">>");
         });
-        Node.Publisher pubber = node.addPublisher("test_topic");
+        Node.Publisher pubber = node.addTextPublisher("test_topic");
 
         node.addTimer("One Second", 1, () -> {
             //String timestring = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"));

@@ -72,13 +72,21 @@ public class Node {
 
     }
 
-    //TODO AR: Stringify
-    class Publisher {
-        //TODO AR: This can be a lot more efficient if we use a reference instead, maybe
-        private final String topic;
-
-        private Publisher(String topic) {
+    abstract class Publisher<T> {
+        protected final String topic;
+        protected Publisher(String topic) {
             this.topic = topic;
+        }
+        abstract void publish(T data);
+    }
+
+    //TODO AR: Stringify
+    class TextPublisher extends Publisher<String> {
+        //TODO AR: This can be a lot more efficient if we use a reference instead, maybe
+
+
+        private TextPublisher(String topic) {
+            super(topic);
         }
 
         public void publish(String data){
@@ -108,11 +116,11 @@ public class Node {
         timerQueue.addTimer(name, interval);
     }
 
-    public Publisher addPublisher(String topic){
+    public TextPublisher addTextPublisher(String topic){
         //TODO AR: Check this syncing and possibly clean it up elsewhere
         localPublishers.add(topic);
         publisherMap.put(topic, new HashMap<>());
-        return new Publisher(topic);
+        return new TextPublisher(topic);
     }
 
     public void Subscribe(String topic, Consumer<String> callback){
