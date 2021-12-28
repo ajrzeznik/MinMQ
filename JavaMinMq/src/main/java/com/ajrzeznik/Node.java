@@ -3,6 +3,7 @@ package com.ajrzeznik;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.SocketException;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -16,7 +17,7 @@ import com.google.gson.Gson;
 
 public class Node {
 
-    private final HashMap<String, Consumer<String>> callbackMap = new HashMap<>();
+    private final HashMap<String, Consumer<ByteBuffer>> callbackMap = new HashMap<>();
     private final SubSocket receiveSocket;
     private final int port;
     private final TimerQueue timerQueue;
@@ -163,7 +164,7 @@ public class Node {
     public void Subscribe(String topic, Consumer<String> callback){
         //TODO AR: TYPE CHECKING!!!!!! DO A LOT OF THAT!!!!! And make this actually work with the right types
         localSubscribers.add(topic);
-        callbackMap.put(topic, callback);
+        callbackMap.put(topic, (data) -> {callback.accept(StandardCharsets.UTF_8.decode(data).toString());});
     }
 
 
@@ -205,7 +206,7 @@ public class Node {
                     String strMsg = message.topic();
                     System.out.println("Received message of topic: "+ strMsg );
                     //if message.getByteBuffer();
-                    callbackMap.get(strMsg).accept(StandardCharsets.UTF_8.decode(message.dataAsByteBuffer()).toString());
+                    callbackMap.get(strMsg).accept(message.dataAsByteBuffer());
                     break;
                 case MessageType.Address:
                     //TODO AR: Deserialize data to node address
