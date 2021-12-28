@@ -282,7 +282,7 @@ public class Node {
                     addressMap.socketMap.get(message.origin()).setConnected();
 
                     PubSub pubsubData = PubSub.getRootAsPubSub(message.dataAsByteBuffer());
-
+                    //TODO AR: Add cross-check of types provided for each topic
                     //TODO AR:Do I even need the pub data? Really I just need sub and can cross-reference
                     for (int i = 0; i < pubsubData.subLength(); i++) {
                         String topic = pubsubData.sub(i);
