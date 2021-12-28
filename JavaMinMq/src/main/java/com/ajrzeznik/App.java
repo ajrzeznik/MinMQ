@@ -1,14 +1,9 @@
 package com.ajrzeznik;
 
-import com.ajrzeznik.examples.ExampleData;
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.internal.LinkedTreeMap;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 
 /**
  * Hello world!
@@ -40,7 +35,11 @@ public class App
             //String timestring = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"));
             //System.out.println(timestring+": Triggered timer: One Second=====");//TODO AR: This needs to be send somewhere
             pubber.publish("This is some data!!!!!!");
-            pubberJson.publish(new ExampleData());
+            pubberJson.publish(new Object(){
+                boolean data1 = true;
+                String string1 = "This is anonymous";
+                double double1 = 3.5;
+            });
         });
 
         node.addTimer("Five Second", 5, () -> {
