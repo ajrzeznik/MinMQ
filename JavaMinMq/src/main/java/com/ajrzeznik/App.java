@@ -27,8 +27,6 @@ public class App
         System.out.println(((ArrayList) (result.get("testar"))).get(2));
         // TODO AR: Need to join on this as it's not a Daemon
 
-
-
         Node node = Node.create("fun node");
         node.Subscribe("test_topic", (data) -> {
             System.out.println("I JUST RECEIVED A CALLBACK: <<" + data + ">>");
