@@ -158,7 +158,7 @@ public class Node {
                     String strMsg = message.topic();
                     System.out.println("Received message of topic: "+ strMsg );
                     //if message.getByteBuffer();
-                    callbackMap.get(strMsg).accept(StandardCharsets.UTF_8.decode(message.getByteBuffer()).toString());
+                    callbackMap.get(strMsg).accept(StandardCharsets.UTF_8.decode(message.dataAsByteBuffer()).toString());
                     break;
                 case MessageType.Address:
                     //TODO AR: Deserialize data to node address
