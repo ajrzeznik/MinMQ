@@ -3,7 +3,7 @@ use std::io;
 use socket2;
 use std::mem::MaybeUninit;
 use mq_message_base;
-use mq_message_base::NodeAddressT;
+use mq_message_base::{get_root_as_mqmessage, NodeAddress, NodeAddressT, root_as_node_address};
 
 const DYNAMIC_DISCOVER_PORT: u16 = 43357;
 
@@ -13,7 +13,7 @@ pub fn broadcast_address() -> io::Result<()> {
 
     //TODO AR: Remove the object api here
     let mut msg = NodeAddressT::default();
-    msg.name = Some("Rust test msg".to_string());
+    msg.name = Some("Rust_Data".to_string());
     msg.port = 32121;
     let mut fbb = flatbuffers::FlatBufferBuilder::with_capacity(256);
     let mut temp = msg.pack(&mut fbb);
@@ -31,11 +31,15 @@ pub fn receive_broadcast() -> io::Result<()> {
     let address: std::net::SocketAddr = format!("0.0.0.0:{}", DYNAMIC_DISCOVER_PORT).parse().unwrap();
     socket.bind(&address.into())?;
     //TODO AR: Handle some receive/send buffering here!!!!
-    let mut buf = [MaybeUninit::<u8>::new(0); 100];
-    let (byte_count, sending_address) = socket.recv_from(&mut buf)?;
-    let c= buf.iter().map(|a|unsafe {a.assume_init()}).collect::<Vec<u8>>();
-    println!("Received {:?}", c);
-    Ok(())
+    loop {
+        let mut buf = [MaybeUninit::<u8>::new(0); 256];
+        let (byte_count, sending_address) = socket.recv_from(&mut buf)?;
+        //TODO AR: Can clean this up with nightly
+        let c = buf.iter().map(|a| unsafe { a.assume_init() }).collect::<Vec<u8>>();
+        //TODO AR: Error handling here
+        let node_address = root_as_node_address(&c).expect("Failed to unwrap incoming node address buffer");
+        println!("Received {:?}", node_address);
+    }
 }
 
 #[cfg(test)]
