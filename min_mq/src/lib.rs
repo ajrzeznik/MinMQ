@@ -1,6 +1,7 @@
 pub mod node;
 mod dynamic_discovery;
 mod timer;
+mod sockets;
 
 #[cfg(test)]
 mod tests {
