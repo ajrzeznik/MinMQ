@@ -10,3 +10,4 @@ socket2 = "0.4.2"
 chrono = "*"
 mq_message_base = { path = "../mq_message_base" }
 flatbuffers = "2.0.0"
+crossbeam = "0.8"

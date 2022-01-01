@@ -3,9 +3,10 @@ use std::{thread, time};
 use std::cmp::Ordering;
 use std::time::Instant;
 use core::time::Duration;
+use std::sync::mpsc::Receiver;
 
 #[derive(Clone, Eq, PartialEq)]
-struct Timer {
+pub struct Timer {
     name: String,
     interval: Duration,
     next_event: Instant
@@ -38,10 +39,23 @@ impl Ord for Timer {
     }
 }
 
-pub fn start_timer() {
+pub fn start_timer(receiver: Receiver<Option<Timer>>) {
+    //TODO AR: For now pass the whole timer queue in for simplicity. In the future, will need
+    // to use a channel to pass the data across.
     let mut timer_queue = BinaryHeap::<Timer>::new();
-    timer_queue.push(Timer::new("OneSec", 1.0));
-    timer_queue.push(Timer::new("FiveSec", 5.0));
+
+    loop {
+        let new_timer_result =  receiver.recv();
+        let new_timer = match new_timer_result {
+            Ok(t) => t,
+            Err(e) => {println!("{}", e.to_string()); panic!()}
+        };
+        match new_timer {
+            Some(t) => timer_queue.push(t),
+            None => break
+        }
+    }
+
     loop {
         let next_timer = timer_queue.peek().expect("Timer queue was empty!!!");
         let current_time = time::Instant::now();
