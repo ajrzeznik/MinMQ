@@ -4,6 +4,8 @@ use std::cmp::Ordering;
 use std::time::Instant;
 use core::time::Duration;
 use std::sync::mpsc::Receiver;
+use mq_message_base::{MessageType, MQMessageT};
+use crate::sockets::PubSocket;
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct Timer {
@@ -39,10 +41,11 @@ impl Ord for Timer {
     }
 }
 
-pub fn start_timer(receiver: Receiver<Option<Timer>>) {
+pub fn start_timer(receiver: Receiver<Option<Timer>>, name: String, port: u16) {
     //TODO AR: For now pass the whole timer queue in for simplicity. In the future, will need
     // to use a channel to pass the data across.
     let mut timer_queue = BinaryHeap::<Timer>::new();
+    let socket = PubSocket::new(&("tcp://localhost:".to_owned() + &port.to_string()));
 
     loop {
         let new_timer_result =  receiver.recv();
@@ -62,6 +65,16 @@ pub fn start_timer(receiver: Receiver<Option<Timer>>) {
         if next_timer.next_event <= current_time {
             let mut old_timer = timer_queue.pop().expect("Timer queue was empty!!!");
             old_timer.next_event += old_timer.interval;
+
+            //TODO AR: Use more standare MQMessage interface
+            let mut msg = MQMessageT::default();
+            msg.message_type = MessageType::Topic;
+            msg.topic = Some(old_timer.name.clone());
+            msg.origin = Some(name.clone());
+            let mut fbb = flatbuffers::FlatBufferBuilder::with_capacity(256);
+            let mut temp = msg.pack(&mut fbb);
+            fbb.finish(temp, None);
+            socket.send(fbb.finished_data());
             println!("Event triggered! Name: {}", old_timer.name);
             timer_queue.push(old_timer);
         } else {

@@ -25,7 +25,7 @@ impl SubSocket{
     }
     //TODO AR: When message structs are created this should be updated
     //Vector here seems to add about and extra 50-80 microsends. But that's actually probably fine (to use a nicer data structure).
-    pub(crate) fn recv(&mut self) -> &[u8]{
+    pub(crate) fn receive(&mut self) -> &[u8]{
         self.last_message = self.inner_socket.recv().expect(format!("Receive failure at {:?}", self.inner_socket).as_str());
         &self.last_message
     }
