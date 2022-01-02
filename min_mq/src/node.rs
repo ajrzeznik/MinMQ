@@ -5,7 +5,7 @@ use std::sync::mpsc::{channel, Sender};
 use std::thread;
 use std::thread::JoinHandle;
 use mq_message_base::{MessageType, MQMessage, root_as_mqmessage};
-use crate::dynamic_discovery::receive_broadcast;
+use crate::dynamic_discovery::{broadcast_address, receive_broadcast};
 use crate::sockets::SubSocket;
 use crate::timer::{start_timer, Timer};
 
@@ -44,11 +44,13 @@ impl Node {
     }
 
     pub fn run(&mut self) {
-        let handle_receive = thread::spawn(|| {
-            receive_broadcast();
+        let passed_name = self.name.to_string();
+        let handle_receive = thread::spawn(move || {
+            receive_broadcast( 55555);
         });
         //Send None to trigger the timer to start running
         //TODO AR: Sync this with the recv sockets
+        self.add_timer("dynamic_broadcast_ping", 1.0, || {broadcast_address();});
         self.timer_sender.send(None);
         loop {
             let buffer = self.main_socket.receive();
@@ -59,6 +61,9 @@ impl Node {
                     self.callback_map.get_mut(msg.topic()
                         .expect("Got message with an empty topic"))
                         .expect("Topic did not have callback")(&msg);
+                }
+                MessageType::Address => {
+
                 }
                 _ => panic!("Unexpected message of type: {:?}", msg.message_type())
             }
