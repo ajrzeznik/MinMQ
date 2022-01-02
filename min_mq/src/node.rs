@@ -1,9 +1,10 @@
+use std::borrow::Borrow;
 use std::collections::{BinaryHeap, HashMap};
 use std::ops::Bound;
 use std::sync::mpsc::{channel, Sender};
 use std::thread;
 use std::thread::JoinHandle;
-use mq_message_base::{MQMessage, root_as_mqmessage};
+use mq_message_base::{MessageType, MQMessage, root_as_mqmessage};
 use crate::dynamic_discovery::receive_broadcast;
 use crate::sockets::SubSocket;
 use crate::timer::{start_timer, Timer};
@@ -49,8 +50,17 @@ impl Node {
         self.timer_sender.send(None);
         loop {
             let buffer = self.main_socket.receive();
-            let node_address = root_as_mqmessage(buffer).expect("Failed to unwrap incoming MQMessage buffer");
-            println!("Receive node address {:?}", node_address);
+            let msg = root_as_mqmessage(buffer).expect("Failed to unwrap incoming MQMessage buffer");
+            match msg.message_type() {
+                MessageType::Topic => {
+                    //TODO AR: Cleanup these checks!!!
+                    self.callback_map.get_mut(msg.topic()
+                        .expect("Got message with an empty topic"))
+                        .expect("Topic did not have callback")(&msg);
+                }
+                _ => panic!("Unexpected message of type: {:?}", msg.message_type())
+            }
+            println!("Receive node address {:?}", msg);
         }
     }
 }
