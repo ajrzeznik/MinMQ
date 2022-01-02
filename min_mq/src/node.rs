@@ -14,6 +14,8 @@ pub struct Node{
     timer_thread: JoinHandle<()>,
     timer_sender: Sender<Option<Timer>>,
     main_socket: SubSocket,
+    //TODO AR: I am not sure how I feel about sotring FnMut specifically here, but it is probably ok.
+    //Part of me definitely feels like there is a more elegant/better way of handling the callback map in rust
     callback_map: HashMap<String, Box<dyn FnMut(&MQMessage)>>
 }
 
