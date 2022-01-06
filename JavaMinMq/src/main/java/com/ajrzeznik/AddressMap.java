@@ -40,6 +40,7 @@ public class AddressMap {
             for (Map.Entry<String,PubSocket> item : socketMap.entrySet()) {
                 connectedCheck = connectedCheck && item.getValue().isConnected();
             }
+            allConnected = connectedCheck;
             return connectedCheck;
         }
     }

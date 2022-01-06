@@ -2,6 +2,7 @@ pub mod node;
 mod dynamic_discovery;
 mod timer;
 mod sockets;
+mod address_map;
 
 #[cfg(test)]
 mod tests {

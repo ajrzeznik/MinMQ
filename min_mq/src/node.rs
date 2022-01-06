@@ -4,22 +4,26 @@ use std::ops::Bound;
 use std::sync::mpsc::{channel, Sender};
 use std::thread;
 use std::thread::JoinHandle;
-use mq_message_base::{MessageType, MQMessage, root_as_mqmessage};
+use mq_message_base::{MessageType, MQMessage, MQMessageArgs, root_as_mqmessage};
+use crate::address_map::AddressMap;
 use crate::dynamic_discovery::{broadcast_address, receive_broadcast};
-use crate::sockets::SubSocket;
+use crate::sockets::{PubSocket, SubSocket};
 use crate::timer::{start_timer, Timer};
 
-pub struct Node{
+pub struct Node<'a>{
     name: String,
     timer_thread: JoinHandle<()>,
     timer_sender: Sender<Option<Timer>>,
     main_socket: SubSocket,
     //TODO AR: I am not sure how I feel about sotring FnMut specifically here, but it is probably ok.
     //Part of me definitely feels like there is a more elegant/better way of handling the callback map in rust
-    callback_map: HashMap<String, Box<dyn FnMut(&MQMessage)>>
+    callback_map: HashMap<String, Box<dyn FnMut(&MQMessage)>>,
+    address_map: AddressMap,
+    ack_bytes: flatbuffers::FlatBufferBuilder<'a>,
+    ping_bytes: flatbuffers::FlatBufferBuilder<'a>
 }
 
-impl Node {
+impl Node<'_> {
     pub fn new(name: &str) -> Self {
         let (sender, receiver) = channel();
 
@@ -28,12 +32,41 @@ impl Node {
         let handle_timer = thread::spawn(move || {
             start_timer(receiver, passed_name, 55555);
         });
+
+
+        //Ack and ping bytes created
+        let mut ack_builder = flatbuffers::FlatBufferBuilder::with_capacity(256);
+        //TODO AR: Clean this up to remove allocations possibly
+        let origin = ack_builder.create_string(name);
+        let msg = MQMessage::create(&mut ack_builder, &MQMessageArgs{
+            topic: None,
+            origin: Some(origin),
+            message_type: MessageType::Ack,
+            data: None
+        });
+        ack_builder.finish(msg, None);
+
+        //Ack and ping bytes created
+        let mut ping_builder = flatbuffers::FlatBufferBuilder::with_capacity(256);
+        //TODO AR: Clean this up to remove allocations possibly
+        let origin = ping_builder.create_string(name);
+        let msg = MQMessage::create(&mut ping_builder, &MQMessageArgs{
+            topic: None,
+            origin: Some(origin),
+            message_type: MessageType::Ping,
+            data: None
+        });
+        ping_builder.finish(msg, None);
+
         Node {
             name: name.to_string(),
             timer_thread: handle_timer,
             timer_sender: sender,
             main_socket: SubSocket::new("tcp://*:55555"),
-            callback_map: Default::default()
+            callback_map: Default::default(),
+            address_map: AddressMap::new(name),
+            ack_bytes: ack_builder,
+            ping_bytes: ping_builder,
         }
     }
 
@@ -49,8 +82,29 @@ impl Node {
             receive_broadcast( 55555);
         });
         //Send None to trigger the timer to start running
+        //-----------------Ping timer stuff---------------------------------------
         //TODO AR: Sync this with the recv sockets
-        self.add_timer("dynamic_broadcast_ping", 1.0, || {broadcast_address();});
+        let passed_name = self.name.clone();
+        //TODO AR: replace with the main out socket, probably? could also just use here again
+        let out_socket = PubSocket::new("tcp://localhost:55555");
+        // Send out ping message
+        //TODO AR: Check the size here
+        let mut builder = flatbuffers::FlatBufferBuilder::with_capacity(256);
+        //TODO AR: Clean this up to remove allocations possibly
+        let origin = builder.create_string(&passed_name);
+        let msg = MQMessage::create(&mut builder, &MQMessageArgs{
+            topic: None,
+            origin: Some(origin),
+            message_type: MessageType::Ping,
+            data: None
+        });
+        builder.finish(msg, None);
+        //-------------------End timer state stuff----------------------------------
+        let broadcast_name = self.name.clone();
+        self.add_timer("dynamic_broadcast_ping", 1.0, move|| {
+            broadcast_address(broadcast_name.clone(), 55555);
+            out_socket.send(builder.finished_data());
+        });
         self.timer_sender.send(None);
         loop {
             let buffer = self.main_socket.receive();
@@ -63,11 +117,31 @@ impl Node {
                         .expect("Topic did not have callback")(&msg);
                 }
                 MessageType::Address => {
+                    println!("Received ADDRESS {:?}", msg);
+                    self.address_map.update_address(msg.origin().unwrap(), &(msg.topic().unwrap()));
+                }
+                MessageType::Ping => {
+                    println!("Received PING {:?}", msg);
+                    if self.address_map.socket_map.contains_key(msg.origin().unwrap()) {
+                        self.address_map.socket_map.get(msg.origin().unwrap()).unwrap().send(self.ack_bytes.finished_data())
+                    } else {
+                        println!("NOT YET IN ADDRESS MAP!!!");
+                    }
 
+                }
+                MessageType::Ack => {
+                    println!("Received ACK {:?}", msg);
+                    self.address_map.socket_map.get_mut(msg.origin().unwrap()).unwrap().set_connected();
+                    self.address_map.all_newly_connected();
+                    //TODO AR: If all newly connected here, send out messages everywhere!!!!
+                }
+                MessageType::PubSub => {
+                    println!("Received PUBSUB {:?}", msg);
+                    //TODO AR: Handle the pubsub registration!!!!!
                 }
                 _ => panic!("Unexpected message of type: {:?}", msg.message_type())
             }
-            println!("Receive node address {:?}", msg);
+
         }
     }
 }

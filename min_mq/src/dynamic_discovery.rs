@@ -8,14 +8,15 @@ use crate::sockets::PubSocket;
 
 const DYNAMIC_DISCOVER_PORT: u16 = 43357;
 
-pub fn broadcast_address() -> io::Result<()> {
+//TODO AR: Put this in an object to not always need to repack maybe???
+pub fn broadcast_address(name: String, port: u16) -> io::Result<()> {
     let socket : UdpSocket = UdpSocket::bind("0.0.0.0:0")?;
     socket.set_broadcast(true)?;
 
     //TODO AR: Remove the object api here
     let mut msg = NodeAddressT::default();
-    msg.name = Some("Rust_Data".to_string());
-    msg.port = 32121;
+    msg.name = Some(name);
+    msg.port = port;
     let mut fbb = flatbuffers::FlatBufferBuilder::with_capacity(256);
     let mut temp = msg.pack(&mut fbb);
     fbb.finish(temp, None);

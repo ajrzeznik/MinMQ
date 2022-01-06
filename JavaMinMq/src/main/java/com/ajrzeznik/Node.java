@@ -218,7 +218,7 @@ public class Node {
                 case MessageType.Address:
                     //TODO AR: Deserialize data to node address
                     //TODO AR: Clean up and send out the pub/sub additions
-                    String address = "tcp:/" + message.topic();
+                    String address = "tcp://" + message.topic();
                     if (addressMap.updateAddress(message.origin(), address)){
                         System.out.println("==NEW ADDRESS: name: " + message.origin()+ ", address: " + address);
                         System.out.println(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")));

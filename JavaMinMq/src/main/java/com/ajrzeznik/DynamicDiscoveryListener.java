@@ -41,7 +41,7 @@ public class DynamicDiscoveryListener extends Thread{
             FlatBufferBuilder builder = new FlatBufferBuilder();
             //TODO AR: Clean up this creation/work here on these types
             MQMessage.finishMQMessageBuffer(builder, MQMessage.createMQMessage(builder,
-                    builder.createString(packet.getAddress()+ ":" + addressMessage.port()),
+                    builder.createString(packet.getAddress().toString().substring(1)+ ":" + addressMessage.port()),
                     builder.createString(addressMessage.name()),
                     MessageType.Address,
                     builder.createByteVector(new byte[0]))

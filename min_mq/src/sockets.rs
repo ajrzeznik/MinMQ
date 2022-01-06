@@ -32,7 +32,9 @@ impl SubSocket{
 }
 
 pub(crate) struct PubSocket{
-    inner_socket: Socket
+    inner_socket: Socket,
+    address: String,
+    connected: bool
 }
 
 impl PubSocket{
@@ -42,11 +44,31 @@ impl PubSocket{
         let new_socket = Socket::new(Protocol::Pub0).expect("Failed to create a Pub Socket");
 
         let pub_socket =  PubSocket {
-            inner_socket: new_socket
+            inner_socket: new_socket,
+            address: address.to_string(),
+            connected: false
         };
 
         pub_socket.inner_socket.dial_async(address).expect(format!("Failed to dial to {}", address).as_str());
         return pub_socket;
+    }
+
+    //TODO AR: Return &str instead and deal with lifetimes
+    pub(crate) fn get_address(&self) -> String {
+        self.address.clone()
+    }
+
+    pub(crate) fn update_address(&mut self, address: &str) {
+        self.address = address.to_string();
+        self.inner_socket = Socket::new(Protocol::Pub0).expect("Failed to create a new address socket");
+    }
+
+    pub(crate) fn set_connected(&mut self) {
+        self.connected = true;
+    }
+
+    pub(crate) fn get_connected(&self) -> bool {
+        self.connected
     }
 
     pub(crate) fn send(&self, bytes_data: &[u8]) {
