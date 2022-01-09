@@ -5,7 +5,7 @@ use std::ops::Bound;
 use std::sync::mpsc::{channel, Sender};
 use std::thread;
 use std::thread::JoinHandle;
-use mq_message_base::{MessageType, MQMessage, MQMessageArgs, root_as_mqmessage};
+use mq_message_base::{MessageType, MQMessage, MQMessageArgs, PubSub, PubSubArgs, root_as_mqmessage};
 use crate::address_map::AddressMap;
 use crate::dynamic_discovery::{broadcast_address, receive_broadcast};
 use crate::sockets::{PubSocket, SubSocket};
@@ -20,6 +20,7 @@ pub struct Node<'a>{
     //Part of me definitely feels like there is a more elegant/better way of handling the callback map in rust
     callback_map: HashMap<String, Box<dyn FnMut(&MQMessage)>>,
     address_map: AddressMap,
+    local_subscribers: Vec<String>,
     ack_bytes: flatbuffers::FlatBufferBuilder<'a>,
     ping_bytes: flatbuffers::FlatBufferBuilder<'a>
 }
@@ -66,6 +67,7 @@ impl Node<'_> {
             main_socket: SubSocket::new("tcp://*:55555"),
             callback_map: Default::default(),
             address_map: AddressMap::new(name),
+            local_subscribers: Vec::new(),
             ack_bytes: ack_builder,
             ping_bytes: ping_builder,
         }
@@ -150,7 +152,43 @@ impl Node<'_> {
                         let mut current_map: RefMut<HashMap<String, PubSocket>> = self.address_map.socket_map.borrow_mut();
                         current_map.get_mut(msg.origin().unwrap()).unwrap().set_connected();
                     }
-                    self.address_map.all_newly_connected();
+                    if self.address_map.all_newly_connected() {
+                        println!(">>>>>>>>>>>>>>>FULL CONNECTION, SEND OUT PUBSUB DATA");
+
+
+
+                        let mut data_builder = flatbuffers::FlatBufferBuilder::with_capacity(1024);
+                        //TODO AR: Almost certainly a better way to handle this
+                        let mut testvec: Vec<&str> = Vec::new();
+                        for item in &self.local_subscribers{
+                            testvec.push(&item);
+                        }
+                        let sub_data = data_builder.create_vector_of_strings(&testvec);
+                        let pubsub_data = PubSub::create(&mut data_builder, &PubSubArgs{
+                            pub_ : None,
+                            sub: Some(sub_data)
+                        });
+                        data_builder.finish(pubsub_data, None);
+
+
+                        let mut builder = flatbuffers::FlatBufferBuilder::with_capacity(1024);
+                        //TODO AR: Clean this up to remove allocations possibly
+                        let origin = builder.create_string(&self.name);
+                        let data_offset = builder.create_vector(data_builder.finished_data());
+                        let msg = MQMessage::create(&mut builder, &MQMessageArgs{
+                            topic: None,
+                            origin: Some(origin),
+                            message_type: MessageType::PubSub,
+                            data: Some(data_offset)
+                        });
+                        builder.finish(msg, None);
+                        let run_map: &RefCell<HashMap<String, PubSocket>> = self.address_map.socket_map.borrow();
+                        let map = run_map.borrow();
+                        for (_ ,socket) in map.iter(){
+                            socket.send(builder.finished_data());
+                        }
+
+                    };
                     //TODO AR: If all newly connected here, send out messages everywhere!!!!
                 }
                 MessageType::PubSub => {

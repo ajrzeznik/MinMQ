@@ -33,6 +33,7 @@ impl AddressMap {
         } else {
             current_map.insert(name.to_string(), PubSocket::new(address));
         }
+        self.all_connected.set(false);
         true
     }
 
