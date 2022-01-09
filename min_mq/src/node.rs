@@ -1,11 +1,12 @@
-use std::borrow::Borrow;
+use std::borrow::{Borrow, BorrowMut};
 use std::cell::{Ref, RefCell, RefMut};
 use std::collections::{BinaryHeap, HashMap};
 use std::ops::Bound;
 use std::sync::mpsc::{channel, Sender};
+use std::sync::{Arc, RwLock};
 use std::thread;
 use std::thread::JoinHandle;
-use mq_message_base::{MessageType, MQMessage, MQMessageArgs, PubSub, PubSubArgs, root_as_mqmessage};
+use mq_message_base::{MessageType, MQMessage, MQMessageArgs, PubSub, PubSubArgs, root_as_mqmessage, root_as_pub_sub};
 use crate::address_map::AddressMap;
 use crate::dynamic_discovery::{broadcast_address, receive_broadcast};
 use crate::sockets::{PubSocket, SubSocket};
@@ -22,6 +23,7 @@ pub struct Node<'a>{
     address_map: AddressMap,
     local_subscribers: Vec<String>,
     local_publishers: Vec<String>,
+    publisher_map: HashMap<String, Arc<RwLock<HashMap<String, PubSocket>>>>,
     ack_bytes: flatbuffers::FlatBufferBuilder<'a>,
     ping_bytes: flatbuffers::FlatBufferBuilder<'a>
 }
@@ -70,6 +72,7 @@ impl Node<'_> {
             address_map: AddressMap::new(name),
             local_subscribers: Vec::new(),
             local_publishers: Vec::new(),
+            publisher_map: HashMap::new(),
             ack_bytes: ack_builder,
             ping_bytes: ping_builder,
         }
@@ -113,7 +116,7 @@ impl Node<'_> {
         let broadcast_name = self.name.clone();
 
         //TODO AR: Can clean this up quite a bit; the Refcell should probably be at a different level to keep stuff clean
-        let send_sockets = self.address_map.socket_map.clone();
+        let send_sockets = self.address_map.get_socket_map();
         let all_connected = self.address_map.all_connected.clone();
         self.add_timer("dynamic_broadcast_ping", 1.0, move|| {
             broadcast_address(broadcast_name.clone(), 55555);
@@ -145,20 +148,13 @@ impl Node<'_> {
                 }
                 MessageType::Ping => {
                     println!("Received PING {:?}", msg);
-                    let ref_cell_map : &RefCell<HashMap<String, PubSocket>> = self.address_map.socket_map.borrow();
-                    let current_map = ref_cell_map.borrow();
-                    if current_map.contains_key(msg.origin().unwrap()) {
-                        current_map.get(msg.origin().unwrap()).unwrap().send(self.ack_bytes.finished_data())
-                    } else {
-                        println!("NOT YET IN ADDRESS MAP!!!");
-                    }
+                    self.address_map.send_if_present(msg.origin().unwrap(), self.ack_bytes.finished_data());
 
                 }
                 MessageType::Ack => {
                     println!("Received ACK {:?}", msg);
                     {
-                        let mut current_map: RefMut<HashMap<String, PubSocket>> = self.address_map.socket_map.borrow_mut();
-                        current_map.get_mut(msg.origin().unwrap()).unwrap().set_connected();
+                        self.address_map.set_connected(msg.origin().unwrap());
                     }
                     if self.address_map.all_newly_connected() {
                         println!(">>>>>>>>>>>>>>>FULL CONNECTION, SEND OUT PUBSUB DATA");
@@ -190,18 +186,34 @@ impl Node<'_> {
                             data: Some(data_offset)
                         });
                         builder.finish(msg, None);
-                        let run_map: &RefCell<HashMap<String, PubSocket>> = self.address_map.socket_map.borrow();
-                        let map = run_map.borrow();
-                        for (_ ,socket) in map.iter(){
-                            socket.send(builder.finished_data());
-                        }
+                        self.address_map.send_to_all(builder.finished_data());
 
                     };
                     //TODO AR: If all newly connected here, send out messages everywhere!!!!
                 }
                 MessageType::PubSub => {
                     println!("Received PUBSUB {:?}", msg);
-                    //TODO AR: Handle the pubsub registration!!!!!
+                    let pubsub_data = root_as_pub_sub(msg.data().unwrap()).expect("Had issue getting pubsub data");
+                    for topic in pubsub_data.sub().unwrap(){
+                        let topic = topic.to_string(); //TODO AR: Clean up another useless allocation;
+                        if self.local_publishers.contains(&topic) {
+                            let mut new_flag = false;
+                            //TODO AR: It should be GUARANTEED that the publisher map contains the topic
+                            let map = self.publisher_map.get(&topic).expect("Publisher not found in publsiher map!!!!");
+                            let map_to_check: &RwLock<HashMap<String, PubSocket>> = map.borrow();
+                            {
+                                let interior = map_to_check.read().unwrap(); //TODO AR: Clean up these result here
+                                if !interior.contains_key(msg.origin().unwrap()) {
+                                    new_flag = true
+                                }
+                            }
+                            if new_flag {
+                                let mut write_map = map_to_check.write().unwrap(); //TODO AR: Clean this up also
+                                write_map.insert(msg.origin().unwrap().to_string(), self.address_map.get_socket(msg.origin().unwrap()));
+                            }
+
+                        }
+                    }
                 }
                 _ => panic!("Unexpected message of type: {:?}", msg.message_type())
             }

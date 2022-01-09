@@ -1,3 +1,4 @@
+use std::sync::{Arc, RwLock};
 use nng::{Message, options::{protocol::pubsub::Subscribe, Options}, Protocol, Socket};
 
 pub(crate) struct SubSocket{
@@ -31,47 +32,58 @@ impl SubSocket{
     }
 }
 
-pub(crate) struct PubSocket{
+//TODO AR: Consider what should and should be combined here
+#[derive(Debug)]
+struct InnerPubSocket{
     inner_socket: Socket,
     address: String,
     connected: bool
 }
 
+#[derive(Clone)]
+pub(crate) struct PubSocket{
+    inner: Arc<RwLock<InnerPubSocket>>
+}
+
+//TODO AR: Check all the unwrapping stuff contained herein
+//TODO AR: Connected being in a separate structure eases off a lot on lock contention
 impl PubSocket{
     //TODO AR: Fix this error returns to better stuff
     pub(crate) fn new(address: &str) -> PubSocket{
 
         let new_socket = Socket::new(Protocol::Pub0).expect("Failed to create a Pub Socket");
-
+        new_socket.dial_async(address).expect(format!("Failed to dial to {}", address).as_str());
         let pub_socket =  PubSocket {
-            inner_socket: new_socket,
-            address: address.to_string(),
-            connected: false
+            inner: Arc::new( RwLock::new(InnerPubSocket{
+                inner_socket: new_socket,
+                address: address.to_string(),
+                connected: false
+            }))
         };
 
-        pub_socket.inner_socket.dial_async(address).expect(format!("Failed to dial to {}", address).as_str());
         return pub_socket;
     }
 
     //TODO AR: Return &str instead and deal with lifetimes
     pub(crate) fn get_address(&self) -> String {
-        self.address.clone()
+        self.inner.read().unwrap().address.clone()
     }
 
     pub(crate) fn update_address(&mut self, address: &str) {
-        self.address = address.to_string();
-        self.inner_socket = Socket::new(Protocol::Pub0).expect("Failed to create a new address socket");
+        let mut inner_socket = self.inner.write().unwrap();
+        inner_socket.address = address.to_string();
+        inner_socket.inner_socket = Socket::new(Protocol::Pub0).expect("Failed to create a new address socket");
     }
 
     pub(crate) fn set_connected(&mut self) {
-        self.connected = true;
+        self.inner.write().unwrap().connected = true;
     }
 
     pub(crate) fn get_connected(&self) -> bool {
-        self.connected
+        self.inner.read().unwrap().connected
     }
 
     pub(crate) fn send(&self, bytes_data: &[u8]) {
-        self.inner_socket.send(bytes_data).expect(format!("Error in sending to {:?}", self.inner_socket).as_str());
+        self.inner.read().unwrap().inner_socket.send(bytes_data).expect(format!("Error in sending to {:?}", self.inner).as_str());
     }
 }
