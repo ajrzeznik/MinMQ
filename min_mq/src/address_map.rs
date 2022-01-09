@@ -26,6 +26,10 @@ impl AddressMap {
     //TODO AR: Refcell stuff here is pretty ugly, probably should be fixed
     pub fn update_address(&mut self, name: &str, address: &str) -> bool{
         let mut current_map = self.socket_map.borrow_mut();
+        if name == self.node_name { //TODO AR: Probably do some checks for address changes here if
+            // we might have a duplicate node with the same name. If that is the case we handle here.
+            return false;
+        }
         if current_map.contains_key(name){
             let socket = current_map.get_mut(name).unwrap();
             if socket.get_address() == address {
@@ -53,13 +57,14 @@ impl AddressMap {
 
     pub fn send(&self, name: &str, data: &[u8]) {
         let ref_current_map: &RefCell<HashMap<String, PubSocket>> = self.socket_map.borrow();
-        ref_current_map.borrow().get(name).unwrap().send(data); //TODO AR: Add some more checking here!!!!
+        ref_current_map.borrow().get(name).unwrap().send(data);
     }
 
     pub fn send_to_all(&self, data: &[u8]) {
         let run_map: &RefCell<HashMap<String, PubSocket>> = self.socket_map.borrow();
         let map = run_map.borrow();
-        for (_ ,socket) in map.iter(){
+        for (name ,socket) in map.iter(){
+            println!("NAME RECCCCC <{}>, socket: {:?}", name, socket);
             socket.send(data);
         }
     }

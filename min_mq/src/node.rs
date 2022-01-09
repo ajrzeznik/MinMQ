@@ -12,6 +12,49 @@ use crate::dynamic_discovery::{broadcast_address, receive_broadcast};
 use crate::sockets::{PubSocket, SubSocket};
 use crate::timer::{start_timer, Timer};
 
+//TODO AR: Generalize for other types of publishers
+//TODO AR: Maybe even make a trait here
+pub struct TextPublisher {
+    topic: String,
+    origin: String,
+    sockets: Arc<RwLock<HashMap<String,PubSocket>>>
+}
+
+impl TextPublisher{
+    fn new(node: &Node, topic: &str) -> Self{
+        TextPublisher{
+            topic: topic.to_string(),
+            origin: node.name.clone(),
+            sockets: node.publisher_map.get(topic).unwrap().clone() //TODO AR: Make sure the topics exist in the right place!!!!!
+        }
+    }
+
+
+    pub fn publish(&self, data: &str) {
+        //TODO AR: Clone efficiency here maybe?
+        //TODO AR: Some macros for these would probably be pretty cool; this is a lot of text to write every time
+        let mut builder = flatbuffers::FlatBufferBuilder::with_capacity(512);
+        //TODO AR: Clean this up to remove allocations possibly
+        let origin = builder.create_string(&self.origin);
+        let topic = builder.create_string(&self.topic);
+        let data_offset = builder.create_vector(data.as_bytes());
+        let msg = MQMessage::create(&mut builder, &MQMessageArgs{
+            topic: Some(topic),
+            origin: Some(origin),
+            message_type: MessageType::Topic,
+            data: Some(data_offset)
+        });
+        builder.finish(msg, None);
+        let arc_borrow: &RwLock<HashMap<String, PubSocket>> = self.sockets.borrow();
+        for (_, socket) in arc_borrow.read().unwrap().iter(){
+            socket.send(builder.finished_data());
+        }
+    }
+}
+
+
+
+
 pub struct Node<'a>{
     name: String,
     timer_thread: JoinHandle<()>,
@@ -22,7 +65,6 @@ pub struct Node<'a>{
     callback_map: HashMap<String, Box<dyn FnMut(&MQMessage)>>,
     address_map: AddressMap,
     local_subscribers: Vec<String>,
-    local_publishers: Vec<String>,
     publisher_map: HashMap<String, Arc<RwLock<HashMap<String, PubSocket>>>>,
     ack_bytes: flatbuffers::FlatBufferBuilder<'a>,
     ping_bytes: flatbuffers::FlatBufferBuilder<'a>
@@ -71,7 +113,6 @@ impl Node<'_> {
             callback_map: Default::default(),
             address_map: AddressMap::new(name),
             local_subscribers: Vec::new(),
-            local_publishers: Vec::new(),
             publisher_map: HashMap::new(),
             ack_bytes: ack_builder,
             ping_bytes: ping_builder,
@@ -82,6 +123,15 @@ impl Node<'_> {
     pub fn add_timer(&mut self, name: &str, interval: f64, mut callback: impl FnMut() + 'static){
         self.callback_map.insert(name.to_string(), Box::new(move |a: &MQMessage|  callback()));
         self.timer_sender.send(Some(Timer::new(name, interval)));
+    }
+
+    pub fn add_text_publisher(&mut self, topic: &str) -> TextPublisher {
+        //TODO AR:==========CHECK FOR STUFF
+        if !self.publisher_map.contains_key(topic){
+            self.publisher_map.insert(topic.to_string(), Arc::new(RwLock::new(HashMap::new())));
+            println!("XXXXX TOPIC ADDED TO PUBLISHER MAP!!!!!");
+        }
+        TextPublisher::new(&self, topic)
     }
 
     //TODO AR: Lots of type checking to be done here
@@ -192,11 +242,11 @@ impl Node<'_> {
                     //TODO AR: If all newly connected here, send out messages everywhere!!!!
                 }
                 MessageType::PubSub => {
-                    println!("Received PUBSUB {:?}", msg);
+                    println!("Received ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ PUBSUB {:?}", msg);
                     let pubsub_data = root_as_pub_sub(msg.data().unwrap()).expect("Had issue getting pubsub data");
                     for topic in pubsub_data.sub().unwrap(){
                         let topic = topic.to_string(); //TODO AR: Clean up another useless allocation;
-                        if self.local_publishers.contains(&topic) {
+                        if self.publisher_map.contains_key(&topic) {
                             let mut new_flag = false;
                             //TODO AR: It should be GUARANTEED that the publisher map contains the topic
                             let map = self.publisher_map.get(&topic).expect("Publisher not found in publsiher map!!!!");

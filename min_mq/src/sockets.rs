@@ -40,7 +40,7 @@ struct InnerPubSocket{
     connected: bool
 }
 
-#[derive(Clone)]
+#[derive(Clone,Debug)]
 pub(crate) struct PubSocket{
     inner: Arc<RwLock<InnerPubSocket>>
 }
