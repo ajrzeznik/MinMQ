@@ -21,6 +21,7 @@ pub struct Node<'a>{
     callback_map: HashMap<String, Box<dyn FnMut(&MQMessage)>>,
     address_map: AddressMap,
     local_subscribers: Vec<String>,
+    local_publishers: Vec<String>,
     ack_bytes: flatbuffers::FlatBufferBuilder<'a>,
     ping_bytes: flatbuffers::FlatBufferBuilder<'a>
 }
@@ -68,6 +69,7 @@ impl Node<'_> {
             callback_map: Default::default(),
             address_map: AddressMap::new(name),
             local_subscribers: Vec::new(),
+            local_publishers: Vec::new(),
             ack_bytes: ack_builder,
             ping_bytes: ping_builder,
         }
@@ -77,6 +79,12 @@ impl Node<'_> {
     pub fn add_timer(&mut self, name: &str, interval: f64, mut callback: impl FnMut() + 'static){
         self.callback_map.insert(name.to_string(), Box::new(move |a: &MQMessage|  callback()));
         self.timer_sender.send(Some(Timer::new(name, interval)));
+    }
+
+    //TODO AR: Lots of type checking to be done here
+    pub fn subscribe_text(&mut self, topic: &str, mut callback: impl FnMut(&str) + 'static){
+        self.local_subscribers.push(topic.to_string());
+        self.callback_map.insert(topic.to_string(), Box::new(move |a: &MQMessage| callback(std::str::from_utf8(a.data().unwrap()).unwrap())));
     }
 
     pub fn run(&mut self) {

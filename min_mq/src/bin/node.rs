@@ -9,6 +9,11 @@ fn main() {
         a += 1;
         println!("Testclosure: {}", a)
     });
+
+    node.subscribe_text("test_topic", move |text| {
+        println!("==I just received the test: {}", text)
+    });
+
     node.run();
     println!("Broadcast complete");
 }
