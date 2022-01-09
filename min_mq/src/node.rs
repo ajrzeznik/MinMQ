@@ -1,4 +1,5 @@
 use std::borrow::Borrow;
+use std::cell::{Ref, RefCell, RefMut};
 use std::collections::{BinaryHeap, HashMap};
 use std::ops::Bound;
 use std::sync::mpsc::{channel, Sender};
@@ -86,7 +87,6 @@ impl Node<'_> {
         //TODO AR: Sync this with the recv sockets
         let passed_name = self.name.clone();
         //TODO AR: replace with the main out socket, probably? could also just use here again
-        let out_socket = PubSocket::new("tcp://localhost:55555");
         // Send out ping message
         //TODO AR: Check the size here
         let mut builder = flatbuffers::FlatBufferBuilder::with_capacity(256);
@@ -101,9 +101,18 @@ impl Node<'_> {
         builder.finish(msg, None);
         //-------------------End timer state stuff----------------------------------
         let broadcast_name = self.name.clone();
+
+        //TODO AR: Can clean this up quite a bit; the Refcell should probably be at a different level to keep stuff clean
+        let send_sockets = self.address_map.socket_map.clone();
         self.add_timer("dynamic_broadcast_ping", 1.0, move|| {
             broadcast_address(broadcast_name.clone(), 55555);
-            out_socket.send(builder.finished_data());
+            let socket_ref : &RefCell<HashMap<String, PubSocket>> = send_sockets.borrow();
+            let sockets = socket_ref.borrow();
+            for (_, socket) in sockets.iter() {
+                if !socket.get_connected() {
+                    socket.send(builder.finished_data());
+                }
+            }
         });
         self.timer_sender.send(None);
         loop {
@@ -122,8 +131,10 @@ impl Node<'_> {
                 }
                 MessageType::Ping => {
                     println!("Received PING {:?}", msg);
-                    if self.address_map.socket_map.contains_key(msg.origin().unwrap()) {
-                        self.address_map.socket_map.get(msg.origin().unwrap()).unwrap().send(self.ack_bytes.finished_data())
+                    let ref_cell_map : &RefCell<HashMap<String, PubSocket>> = self.address_map.socket_map.borrow();
+                    let current_map = ref_cell_map.borrow();
+                    if current_map.contains_key(msg.origin().unwrap()) {
+                        current_map.get(msg.origin().unwrap()).unwrap().send(self.ack_bytes.finished_data())
                     } else {
                         println!("NOT YET IN ADDRESS MAP!!!");
                     }
@@ -131,7 +142,10 @@ impl Node<'_> {
                 }
                 MessageType::Ack => {
                     println!("Received ACK {:?}", msg);
-                    self.address_map.socket_map.get_mut(msg.origin().unwrap()).unwrap().set_connected();
+                    {
+                        let mut current_map: RefMut<HashMap<String, PubSocket>> = self.address_map.socket_map.borrow_mut();
+                        current_map.get_mut(msg.origin().unwrap()).unwrap().set_connected();
+                    }
                     self.address_map.all_newly_connected();
                     //TODO AR: If all newly connected here, send out messages everywhere!!!!
                 }
