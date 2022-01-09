@@ -104,8 +104,12 @@ impl Node<'_> {
 
         //TODO AR: Can clean this up quite a bit; the Refcell should probably be at a different level to keep stuff clean
         let send_sockets = self.address_map.socket_map.clone();
+        let all_connected = self.address_map.all_connected.clone();
         self.add_timer("dynamic_broadcast_ping", 1.0, move|| {
             broadcast_address(broadcast_name.clone(), 55555);
+            if all_connected.get() {
+                return;
+            }
             let socket_ref : &RefCell<HashMap<String, PubSocket>> = send_sockets.borrow();
             let sockets = socket_ref.borrow();
             for (_, socket) in sockets.iter() {

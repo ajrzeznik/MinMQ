@@ -1,11 +1,11 @@
 use std::borrow::Borrow;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
 use crate::sockets::PubSocket;
 
 pub(crate) struct AddressMap {
-    all_connected: bool,
+    pub(crate) all_connected: Rc<Cell<bool>>,
     node_name: String,
     pub(crate) socket_map: Rc<RefCell<HashMap<String, PubSocket>>>
 }
@@ -16,7 +16,7 @@ impl AddressMap {
         socket_map.insert(name.to_string(), PubSocket::new("tcp://localhost:55555"));
 
         AddressMap {
-            all_connected: false,
+            all_connected: Rc::new(Cell::new(false)),
             node_name: name.to_string(),
             socket_map: Rc::new(RefCell::new(socket_map))
         }
@@ -36,14 +36,15 @@ impl AddressMap {
         true
     }
 
-    pub fn all_newly_connected(&mut self) -> bool {
-        if self.all_connected {
+    pub fn all_newly_connected(&self) -> bool {
+        if self.all_connected.get() {
             false
         } else {
             let ref_current_map: &RefCell<HashMap<String, PubSocket>> = self.socket_map.borrow();
             let current_map = ref_current_map.borrow();
-            self.all_connected = !current_map.iter().any(|item| !item.1.get_connected());
-            self.all_connected
+            let result = !current_map.iter().any(|item| !item.1.get_connected());
+            self.all_connected.set(result);
+            result
         }
     }
 }
